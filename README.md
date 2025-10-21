@@ -52,7 +52,7 @@ Implements the "curiosity" reward generation and integrates it into the A3C agen
 
 ---
 
-### **"ICM-Pixels" Baseline Implementation **
+### **"ICM-Pixels" Baseline Implementation ** (Optional)
 
 Implements the critical baseline used to prove the value of the ICM's learned features.
 
