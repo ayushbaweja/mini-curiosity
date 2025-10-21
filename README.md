@@ -3,7 +3,7 @@
 
 # TODOs
 
-- New environments. Paper uses Mariobros and Vizdoom. Ideally something small that's fast to train while has lots of noises features.
+- New environments. Paper uses Mariobros and Vizdoom. Ideally something small that's fast to train while has lots of noises features and sparsed rewards.
 
 - Implement the feature filter and inverse model.
 
