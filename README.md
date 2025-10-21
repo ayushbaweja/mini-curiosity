@@ -16,12 +16,12 @@
 ### **Environment & A3C Baseline**
 
 * **Task 1: Environment Setup.**
-    * [cite_start]Select and implement 1-2 simplified environments.
+    * Select and implement 1-2 simplified environments.
     * **Crucially**: Implement the "noisy" distractor element. This is essential to show *why* ICM works. This could be a "TV with white noise" in a corner of the agent's view, as described in the paper.
 * **Task 2: A3C Baseline Implementation.**
-    * [cite_start]Implement the full Asynchronous Advantage Actor-Critic (A3C) algorithm as the base policy agent.
-    * [cite_start]This includes the policy and value networks, and the asynchronous training setup.
-    * [cite_start]Ensure this baseline agent can run and train in the noisy environment (it is expected to perform poorly or get distracted).
+    * Implement the full Asynchronous Advantage Actor-Critic (A3C) algorithm as the base policy agent.
+    * This includes the policy and value networks, and the asynchronous training setup.
+    * Ensure this baseline agent can run and train in the noisy environment (it is expected to perform poorly or get distracted).
 
 ---
 
@@ -30,11 +30,11 @@
 Implements the self-supervised feature learning part of the Intrinsic Curiosity Module (ICM).
 
 * **Task 1: Feature Encoder ($\phi$).**
-    * [cite_start]Using A3C code, implement the feature encoding network ($\phi$) that transforms raw states ($s_t$ and $s_{t+1}$) into feature vectors. [cite_start]This is typically a convolutional network.
+    * Using A3C code, implement the feature encoding network ($\phi$) that transforms raw states ($s_t$ and $s_{t+1}$) into feature vectors. This is typically a convolutional network.
 * **Task 2: Inverse Dynamics Model.**
-    * [cite_start]Implement the inverse model, which takes the two feature vectors ($\phi(s_t)$, $\phi(s_{t+1})$) and predicts the action ($a_t$) that was taken to get from $s_t$ to $s_{t+1}$.
+    * Implement the inverse model, which takes the two feature vectors ($\phi(s_t)$, $\phi(s_{t+1})$) and predicts the action ($a_t$) that was taken to get from $s_t$ to $s_{t+1}$.
 * **Task 3: Inverse Loss ($L_I$).**
-    * [cite_start]Implement the loss function ($L_I$) for the inverse model (e.g., cross-entropy for discrete actions)[cite: 82]. [cite_start]This loss is what trains the feature encoder ($\phi$).
+    * Implement the loss function ($L_I$) for the inverse model (e.g., cross-entropy for discrete actions)[cite: 82]. This loss is what trains the feature encoder ($\phi$).
 
 ---
 
@@ -43,12 +43,12 @@ Implements the self-supervised feature learning part of the Intrinsic Curiosity 
 Implements the "curiosity" reward generation and integrates it into the A3C agent.
 
 * **Task 1: Forward Dynamics Model.**
-    * [cite_start]Implement the forward model, which takes the current feature vector ($\phi(s_t)$) from Person 2's encoder and the action ($a_t$) to predict the *next* feature vector ($\hat{\phi}(s_{t+1})$).
+    * Implement the forward model, which takes the current feature vector ($\phi(s_t)$) from Person 2's encoder and the action ($a_t$) to predict the *next* feature vector ($\hat{\phi}(s_{t+1})$).
 * **Task 2: Intrinsic Reward Generation.**
-    * [cite_start]Implement the forward loss ($L_F$), which is the prediction error between the predicted next feature ($\hat{\phi}(s_{t+1})$) and the actual next feature ($\phi(s_{t+1})$).
-    * [cite_start]Use this prediction error as the intrinsic curiosity reward ($r_t^i$).
+    * Implement the forward loss ($L_F$), which is the prediction error between the predicted next feature ($\hat{\phi}(s_{t+1})$) and the actual next feature ($\phi(s_{t+1})$).
+    * Use this prediction error as the intrinsic curiosity reward ($r_t^i$).
 * **Task 3: Reward Integration.**
-    * [cite_start]Modify Person 1's A3C agent to combine the external reward ($r_t^e$) and the new intrinsic reward ($r_t^i$) to form the total reward $r_t$ that the policy optimizes.
+    * Modify Person 1's A3C agent to combine the external reward ($r_t^e$) and the new intrinsic reward ($r_t^i$) to form the total reward $r_t$ that the policy optimizes.
 
 ---
 
@@ -57,8 +57,8 @@ Implements the "curiosity" reward generation and integrates it into the A3C agen
 Implements the critical baseline used to prove the value of the ICM's learned features.
 
 * **Task 1: Pixel-Based Forward Model.**
-    * [cite_start]Using Person 1's A3C base, implement a forward model that *directly predicts the next raw state (pixels)* from the current state and action.
-    * [cite_start]This model will have a different architecture from Person 3's, likely using deconvolutional layers to reconstruct the image.
+    * Using Person 1's A3C base, implement a forward model that *directly predicts the next raw state (pixels)* from the current state and action.
+    * This model will have a different architecture from Person 3's, likely using deconvolutional layers to reconstruct the image.
 * **Task 2: Pixel-Based Reward.**
     * Calculate the prediction error in pixel space (e.g., mean squared error) and use this error as the intrinsic reward.
     * Integrate this reward into the A3C agent, just as Person 3 did. This agent is expected to get "distracted" by the noisy part of the environment, as its pixel predictions will always be wrong there.
