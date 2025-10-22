@@ -1,0 +1,6 @@
+uv.lock
+logs/
+.venv/
+*.pkl
+*.zip
+src/curiosity_a2c/__pycache__/

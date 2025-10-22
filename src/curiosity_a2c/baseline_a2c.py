@@ -1,21 +1,29 @@
-import gymnasium as gym
+from pathlib import Path
+import sys
+
+if __package__ in (None, ''):
+    # Running as a script; ensure project src/ is importable.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import numpy as np
 from stable_baselines3 import A2C
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
-from stable_baselines3.common.monitor import Monitor
-import torch
+
+from curiosity_a2c.envs import make_frozenlake_env
 
 
-def make_env():
-    """Create and wrap the environment"""
-    env = gym.make('MountainCar-v0')
-    env = Monitor(env)
-    return env
+def make_env(render_mode=None):
+    """Create and wrap the FrozenLake environment for training or evaluation."""
+    return make_frozenlake_env(
+        map_name="8x8",
+        is_slippery=True,
+        render_mode=render_mode,
+    )
 
 
 def train_baseline_a2c(
-    total_timesteps=100_000,
+    total_timesteps=200_000,
     n_envs=4,
     learning_rate=7e-4,
     n_steps=5,
@@ -23,10 +31,10 @@ def train_baseline_a2c(
     gae_lambda=1.0,
     ent_coef=0.01,
     vf_coef=0.5,
-    save_path="a2c_mountaincar"
+    save_path="a2c_frozenlake"
 ):
     """
-    Train baseline A2C on MountainCar
+    Train baseline A2C on FrozenLake
     
     Args:
         total_timesteps: Total training steps
@@ -85,7 +93,7 @@ def train_baseline_a2c(
     )
     
     print(f"\n{'='*50}")
-    print(f"Training Baseline A2C on MountainCar-v0")
+    print(f"Training Baseline A2C on FrozenLake-v1")
     print(f"{'='*50}")
     print(f"Total timesteps: {total_timesteps:,}")
     print(f"Number of environments: {n_envs}")
@@ -113,7 +121,7 @@ def train_baseline_a2c(
     return model, env
 
 
-def test_model(model_path="a2c_mountaincar_final", n_episodes=10, render=False):
+def test_model(model_path="a2c_frozenlake_final", n_episodes=10, render=False):
     """
     Test a trained A2C model
     
@@ -126,20 +134,16 @@ def test_model(model_path="a2c_mountaincar_final", n_episodes=10, render=False):
     model = A2C.load(model_path)
     
     # Create test environment
-    if render:
-        env = gym.make('MountainCar-v0', render_mode='human')
-    else:
-        env = gym.make('MountainCar-v0')
-    
+    render_mode = 'human' if render else None
+    env = DummyVecEnv([lambda: make_env(render_mode=render_mode)])
+
     # Load normalization stats if available
     try:
-        env = DummyVecEnv([lambda: env])
         env = VecNormalize.load(f"{model_path.replace('_final', '')}_vecnormalize.pkl", env)
         env.training = False
         env.norm_reward = False
     except FileNotFoundError:
         print("Warning: Normalization stats not found, continuing without normalization")
-        env = DummyVecEnv([lambda: env])
     
     episode_rewards = []
     episode_lengths = []
@@ -171,7 +175,7 @@ def test_model(model_path="a2c_mountaincar_final", n_episodes=10, render=False):
     print(f"{'='*50}")
     print(f"Average Reward: {np.mean(episode_rewards):.2f} (+/- {np.std(episode_rewards):.2f})")
     print(f"Average Steps: {np.mean(episode_lengths):.2f} (+/- {np.std(episode_lengths):.2f})")
-    print(f"Success Rate: {sum(1 for r in episode_rewards if r > -200) / n_episodes * 100:.1f}%")
+    print(f"Success Rate: {sum(1 for r in episode_rewards if r > 0.0) / n_episodes * 100:.1f}%")
     print(f"{'='*50}\n")
     
     return episode_rewards, episode_lengths
@@ -180,7 +184,7 @@ def test_model(model_path="a2c_mountaincar_final", n_episodes=10, render=False):
 if __name__ == "__main__":
     # Train the baseline model
     model, env = train_baseline_a2c(
-        total_timesteps=100_000,
+        total_timesteps=200_000,
         n_envs=4,
         learning_rate=7e-4,
         ent_coef=0.01  # Higher entropy for more exploration
@@ -188,4 +192,4 @@ if __name__ == "__main__":
     
     # Test the trained model
     print("\nTesting the trained model...")
-    test_model("a2c_mountaincar_final", n_episodes=10, render=False)
+    test_model("a2c_frozenlake_final", n_episodes=10, render=False)

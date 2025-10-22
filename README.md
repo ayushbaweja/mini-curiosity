@@ -1,6 +1,6 @@
 # mini-curiosity
 
-Implementation of A2C baseline for the Pathak et al. (2017) Intrinsic Curiosity Module paper.
+Implementation of A2C baseline for the Pathak et al. (2017) Intrinsic Curiosity Module paper, now wired to the FrozenLake-v1 environment.
 
 ## Quick Setup
 
@@ -26,7 +26,7 @@ python src/curiosity_a2c/baseline_a2c.py
 
 ```bash
 # TensorBoard
-tensorboard --logdir ./logs/a2c_mountaincar/tensorboard/
+tensorboard --logdir ./logs/a2c_frozenlake/tensorboard/
 
 # Record videos
 python src/curiosity_a2c/record_videos.py 1 5 10
@@ -41,6 +41,7 @@ mini-curiosity/
 ├── src
 │   └── curiosity_a2c
 │       ├── baseline_a2c.py
+│       ├── envs.py
 │       ├── __init__.py
 │       └── record_videos.py
 └── TODOs.md
