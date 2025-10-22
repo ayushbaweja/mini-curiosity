@@ -19,7 +19,7 @@ uv pip install -e .
 ## Train
 
 ```bash
-python src/baseline_a2c.py
+python src/curiosity_a2c/baseline_a2c.py
 ```
 
 ## View Results
@@ -29,18 +29,21 @@ python src/baseline_a2c.py
 tensorboard --logdir ./logs/a2c_mountaincar/tensorboard/
 
 # Record videos
-python src/record_videos.py 1 5 10
+python src/curiosity_a2c/record_videos.py 1 5 10
 ```
 
 ## Project Structure
 
 ```
 mini-curiosity/
-├── src/
-│   ├── baseline_a2c.py      # A2C training
-│   └── record_videos.py     # Video generation
-├── pyproject.toml           # Dependencies (uv uses this)
-└── README.md
+├── pyproject.toml
+├── README.md
+├── src
+│   └── curiosity_a2c
+│       ├── baseline_a2c.py
+│       ├── __init__.py
+│       └── record_videos.py
+└── TODOs.md
 ```
 
 ## Requirements
