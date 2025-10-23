@@ -23,7 +23,7 @@ def train_baseline_a2c(
     gae_lambda=1.0,
     ent_coef=0.01,
     vf_coef=0.5,
-    save_path="a2c_mountaincar"
+    save_path="models/baseline/a2c_mountaincar_baseline"
 ):
     """
     Train baseline A2C on MountainCar

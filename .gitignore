@@ -1,0 +1,6 @@
+uv.lock
+logs/
+videos/
+models/
+__pycache__/
+.venv/
