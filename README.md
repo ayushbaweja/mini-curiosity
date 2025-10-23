@@ -98,15 +98,6 @@ mini-curiosity/
 │       ├── icm_module.py
 │       ├── __init__.py
 │       ├── main.py
-│       ├── __pycache__
-│       │   ├── baseline_a2c.cpython-310.pyc
-│       │   ├── compare.cpython-310.pyc
-│       │   ├── icm_a2c.cpython-310.pyc
-│       │   ├── icm_module.cpython-310.pyc
-│       │   ├── __init__.cpython-310.pyc
-│       │   ├── main.cpython-310.pyc
-│       │   ├── record_videos.cpython-310.pyc
-│       │   └── utils.cpython-310.pyc
 │       ├── record_videos.py
 │       └── utils.py
 ```
