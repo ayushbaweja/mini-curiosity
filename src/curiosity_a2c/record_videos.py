@@ -1,5 +1,4 @@
-"""Video recording helpers for the FrozenLake baseline."""
-
+"""Video recording utilities for FrozenLake A2C agents."""
 from pathlib import Path
 import sys
 
@@ -7,9 +6,11 @@ if __package__ in (None, ''):
     # Running as a script; ensure project src/ is importable.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import argparse
 import os
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
+import numpy as np
 import gymnasium as gym
 from stable_baselines3 import A2C
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
@@ -33,12 +34,18 @@ def _build_env_factory(
         if record:
             if video_folder is None or name_prefix is None:
                 raise ValueError("Recording requires a video_folder and name_prefix.")
+            # Gymnasium 0.29 removed the ``metadata`` keyword from RecordVideo
+            # but still relies on the env's metadata to derive FPS. Guard against
+            # missing metadata so video playback isn't absurdly slow/fast.
+            metadata = dict(getattr(env, 'metadata', {}) or {})
+            metadata['render_fps'] = fps
+            env.metadata = metadata
             env = gym.wrappers.RecordVideo(
                 env,
                 video_folder=video_folder,
                 episode_trigger=lambda _: True,
                 name_prefix=name_prefix,
-                metadata={'fps': fps},
+                video_length=0,
             )
         return env
 
@@ -46,16 +53,17 @@ def _build_env_factory(
 
 
 def record_episodes(
-    model_path: str = "a2c_frozenlake_final",
-    episode_numbers=None,
+    model_path: str = "models/baseline/a2c_frozenlake_baseline_final",
+    episode_numbers: Optional[Sequence[int]] = None,
     video_folder: str = "videos",
     fps: int = 30,
+    model_type: str = 'baseline',
 ):
     """Record specific FrozenLake episodes and return statistics."""
-    episode_numbers = episode_numbers or [1, 5, 10]
+    episode_numbers = list(episode_numbers) if episode_numbers is not None else [1, 5, 10]
     os.makedirs(video_folder, exist_ok=True)
 
-    print(f"Loading model from {model_path}.zip...")
+    print(f"Loading {model_type.upper()} model from {model_path}.zip...")
     model = A2C.load(model_path)
 
     episode_stats = []
@@ -71,7 +79,7 @@ def record_episodes(
             _build_env_factory(
                 record=is_recorded,
                 video_folder=video_folder,
-                name_prefix=f"episode_{episode_num}",
+                name_prefix=f"{model_type}_episode_{episode_num}",
                 fps=fps,
             )
         ])
@@ -106,14 +114,14 @@ def record_episodes(
 
             if is_recorded:
                 print(
-                    f"✅ Episode {episode_num}: Reward = {episode_reward:.2f}, Steps = {steps}"
+                    f"✅ Episode {episode_num}: Reward = {episode_reward:.2f}, Steps: {steps}"
                 )
                 videos_recorded.append(episode_num)
         finally:
             env.close()
 
     print(f"\n{'=' * 60}")
-    print("Video Recording Complete!")
+    print(f"Video Recording Complete! ({model_type.upper()})")
     print(f"{'=' * 60}")
     print(f"Videos saved to: ./{video_folder}/")
     print(f"Episodes recorded: {videos_recorded}")
@@ -135,10 +143,11 @@ def record_episodes(
 
 
 def record_single_episode(
-    model_path: str = "a2c_frozenlake_final",
+    model_path: str = "models/baseline/a2c_frozenlake_baseline_final",
     episode_name: str = "test",
     video_folder: str = "videos",
     fps: int = 30,
+    model_type: str = 'baseline',
 ):
     """Record a single FrozenLake episode with a custom filename."""
     os.makedirs(video_folder, exist_ok=True)
@@ -148,7 +157,7 @@ def record_single_episode(
         _build_env_factory(
             record=True,
             video_folder=video_folder,
-            name_prefix=episode_name,
+            name_prefix=f"{model_type}_{episode_name}",
             fps=fps,
         )
     ])
@@ -164,7 +173,7 @@ def record_single_episode(
         except FileNotFoundError:
             pass
 
-        print(f"📹 Recording {episode_name}...")
+        print(f"📹 Recording {model_type.upper()} - {episode_name}...")
         obs = env.reset()
         done = False
         episode_reward = 0.0
@@ -178,27 +187,170 @@ def record_single_episode(
     finally:
         env.close()
 
-    print(f"✅ Video saved: {video_folder}/{episode_name}-episode-0.mp4")
+    print(f"✅ Video saved: {video_folder}/{model_type}_{episode_name}-episode-0.mp4")
     print(f"   Reward: {episode_reward:.2f}, Steps: {steps}")
 
     return episode_reward, steps
 
 
-if __name__ == "__main__":
-    import sys
+def record_comparison(
+    baseline_path: str = "models/baseline/a2c_frozenlake_baseline_final",
+    icm_path: str = "models/icm/a2c_frozenlake_icm_final",
+    n_episodes: int = 5,
+    video_folder: str = "videos/comparison",
+    fps: int = 30,
+):
+    """Record episodes from both baseline and ICM models for side-by-side comparison."""
+    print(f"\n{'=' * 60}")
+    print("Recording Comparison Videos")
+    print(f"{'=' * 60}\n")
 
-    episodes = [int(x) for x in sys.argv[1:]] if len(sys.argv) > 1 else [1, 5, 10]
-    if sys.argv[1:]:
-        print(f"Recording episodes: {episodes}")
-    else:
-        print(f"Recording default episodes: {episodes}")
-
-    record_episodes(
-        model_path="a2c_frozenlake_final",
-        episode_numbers=episodes,
-        video_folder="videos",
+    baseline_stats = record_episodes(
+        model_path=baseline_path,
+        episode_numbers=list(range(1, n_episodes + 1)),
+        video_folder=f"{video_folder}/baseline",
+        fps=fps,
+        model_type='baseline',
     )
 
-    print("\n💡 Tip: You can specify episodes like:")
-    print("   python record_videos.py 1 5 10")
-    print("   python record_videos.py 3 7 15 20")
+    icm_stats = record_episodes(
+        model_path=icm_path,
+        episode_numbers=list(range(1, n_episodes + 1)),
+        video_folder=f"{video_folder}/icm",
+        fps=fps,
+        model_type='icm',
+    )
+
+    print(f"\n{'=' * 60}")
+    print("Comparison Summary")
+    print(f"{'=' * 60}")
+
+    baseline_rewards = [s['reward'] for s in baseline_stats]
+    icm_rewards = [s['reward'] for s in icm_stats]
+
+    print("\nBaseline A2C:")
+    print(f"  Mean Reward: {np.mean(baseline_rewards):.2f} ± {np.std(baseline_rewards):.2f}")
+    print(f"  Mean Steps: {np.mean([s['steps'] for s in baseline_stats]):.1f}")
+
+    print("\nA2C + ICM:")
+    print(f"  Mean Reward: {np.mean(icm_rewards):.2f} ± {np.std(icm_rewards):.2f}")
+    print(f"  Mean Steps: {np.mean([s['steps'] for s in icm_stats]):.1f}")
+
+    print(f"\n{'=' * 60}\n")
+
+    return {
+        'baseline': baseline_stats,
+        'icm': icm_stats,
+    }
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Record videos of FrozenLake A2C agents')
+    parser.add_argument(
+        '--mode',
+        type=str,
+        default='single',
+        choices=['single', 'comparison', 'both'],
+        help='Recording mode',
+    )
+    parser.add_argument(
+        '--model-type',
+        type=str,
+        choices=['baseline', 'icm'],
+        default='baseline',
+        help='Model type to record (for single mode)',
+    )
+    parser.add_argument(
+        '--model-path',
+        type=str,
+        help='Path to model (without .zip)',
+    )
+    parser.add_argument(
+        '--baseline-path',
+        type=str,
+        default='models/baseline/a2c_frozenlake_baseline_final',
+        help='Path to baseline model',
+    )
+    parser.add_argument(
+        '--icm-path',
+        type=str,
+        default='models/icm/a2c_frozenlake_icm_final',
+        help='Path to ICM model',
+    )
+    parser.add_argument(
+        '--episodes',
+        type=int,
+        nargs='+',
+        help='Episode numbers to record',
+    )
+    parser.add_argument(
+        '--n-episodes',
+        type=int,
+        default=5,
+        help='Number of episodes for comparison mode',
+    )
+    parser.add_argument(
+        '--video-folder',
+        type=str,
+        default='videos',
+        help='Folder to save videos',
+    )
+    parser.add_argument(
+        '--fps',
+        type=int,
+        default=30,
+        help='Frames per second for recorded videos',
+    )
+
+    args = parser.parse_args()
+
+    if args.mode == 'single':
+        model_path = args.model_path
+        if model_path is None:
+            model_path = args.baseline_path if args.model_type == 'baseline' else args.icm_path
+
+        episodes = args.episodes or [1, 5, 10]
+        print(f"Recording {args.model_type.upper()} episodes: {episodes}")
+        record_episodes(
+            model_path=model_path,
+            episode_numbers=episodes,
+            video_folder=args.video_folder,
+            fps=args.fps,
+            model_type=args.model_type,
+        )
+
+    elif args.mode == 'comparison':
+        record_comparison(
+            baseline_path=args.baseline_path,
+            icm_path=args.icm_path,
+            n_episodes=args.n_episodes,
+            video_folder=args.video_folder,
+            fps=args.fps,
+        )
+
+    elif args.mode == 'both':
+        episodes = args.episodes or [1, 5, 10]
+
+        print("\n[1/2] Recording Baseline A2C...")
+        record_episodes(
+            model_path=args.baseline_path,
+            episode_numbers=episodes,
+            video_folder=f"{args.video_folder}/baseline",
+            fps=args.fps,
+            model_type='baseline',
+        )
+
+        print("\n[2/2] Recording A2C with ICM...")
+        record_episodes(
+            model_path=args.icm_path,
+            episode_numbers=episodes,
+            video_folder=f"{args.video_folder}/icm",
+            fps=args.fps,
+            model_type='icm',
+        )
+
+    print("\n💡 Usage examples:")
+    print("   python -m curiosity_a2c.record_videos --mode single --model-type baseline --episodes 1 5 10")
+    print("   python -m curiosity_a2c.record_videos --mode single --model-type icm --episodes 1 5 10")
+    print("   python -m curiosity_a2c.record_videos --mode comparison --n-episodes 5")
+    print("   python -m curiosity_a2c.record_videos --mode both --episodes 1 3 5 7 10")

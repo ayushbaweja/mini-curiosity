@@ -31,7 +31,7 @@ def train_baseline_a2c(
     gae_lambda=1.0,
     ent_coef=0.01,
     vf_coef=0.5,
-    save_path="a2c_frozenlake"
+    save_path="models/baseline/a2c_frozenlake_baseline"
 ):
     """
     Train baseline A2C on FrozenLake
@@ -58,6 +58,13 @@ def train_baseline_a2c(
     eval_env = DummyVecEnv([make_env])
     eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=10.)
     
+    # Ensure output directories are present
+    save_dir = Path(save_path).parent
+    save_dir.mkdir(parents=True, exist_ok=True)
+    log_root = Path('logs') / save_path
+    log_root.mkdir(parents=True, exist_ok=True)
+    (log_root / 'checkpoints').mkdir(parents=True, exist_ok=True)
+
     # Callbacks for evaluation and checkpointing
     eval_callback = EvalCallback(
         eval_env,
@@ -121,7 +128,7 @@ def train_baseline_a2c(
     return model, env
 
 
-def test_model(model_path="a2c_frozenlake_final", n_episodes=10, render=False):
+def test_model(model_path="models/baseline/a2c_frozenlake_baseline_final", n_episodes=10, render=False):
     """
     Test a trained A2C model
     
@@ -192,4 +199,4 @@ if __name__ == "__main__":
     
     # Test the trained model
     print("\nTesting the trained model...")
-    test_model("a2c_frozenlake_final", n_episodes=10, render=False)
+    test_model("models/baseline/a2c_frozenlake_baseline_final", n_episodes=10, render=False)

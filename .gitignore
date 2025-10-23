@@ -1,6 +1,9 @@
 uv.lock
 logs/
+videos/
+models/
+__pycache__/
 .venv/
 *.pkl
 *.zip
-src/curiosity_a2c/__pycache__/
+.cache/
