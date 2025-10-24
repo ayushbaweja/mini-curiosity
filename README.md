@@ -7,7 +7,7 @@ Implementation of A2C baseline for the Pathak et al. (2017) Intrinsic Curiosity 
 
 ```bash
 
-srun --account=gts-ur2 --job-name=my_a100_job --partition=gpu-a100 --gres=gpu:a100:1 --constraint=A100-40GB --cpus-per-task=2 --mem=32G --time=01:00:00 --pty /bin/bash 
+srun --account=<account_name> --job-name=my_a100_job --partition=gpu-a100 --gres=gpu:a100:1 --cpus-per-task=2 --mem=32G --time=01:00:00 --pty /bin/bash 
 
 ```
 ## Quick Setup
