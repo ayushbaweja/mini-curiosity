@@ -10,6 +10,7 @@ Implementation of A2C baseline for the Pathak et al. (2017) Intrinsic Curiosity 
 srun --account=<account_name> --job-name=my_a100_job --partition=gpu-a100 --gres=gpu:a100:1 --cpus-per-task=2 --mem=32G --time=01:00:00 --pty /bin/bash 
 
 ```
+
 ## Quick Setup
 
 ```bash
@@ -24,12 +25,17 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
+## Quick Result
+
+```bash
+#Train and test baseline A2c and Train A2c + ICM 
+python -m curiosity_a2c.main --mode both --timesteps 100000 --test-episodes 50
+
+```
+
 ## Train
 
 ```bash
-#Train baseline A2c and Train A2c + ICM 
-python -m curiosity_a2c.main --mode both --timesteps 100000 --test-episodes 50
-
 #Train baseline A2c
 python -m curiosity_a2c.main --mode baseline --timesteps 100000
 
@@ -84,6 +90,12 @@ python -m curiosity_a2c.main \
     --record-videos \
     --video-episodes 1 5 10
 ```
+
+## Notebook 
+
+`./icm_notebook.ipynb`
+
+Note: we recommend running the previous commands to reproduce the results. The notebook version is mainly for theorical reference and convenience to understand the main part of the code and there seem to be some issues sometimes with recognizing the local .venv environments. 
 
 ## Project Structure
 
