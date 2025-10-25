@@ -25,6 +25,7 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
+<<<<<<< HEAD
 ## Quick Result
 
 ```bash
@@ -32,6 +33,14 @@ uv pip install -e .
 python -m curiosity_a2c.main --mode both --timesteps 100000 --test-episodes 50
 
 ```
+=======
+## Quick Experiment
+```bash
+#Train and text baseline A2c and Train A2c + ICM 
+
+python -m curiosity_a2c.main --mode both --timesteps 100000 --test-episodes 50
+
+>>>>>>> 31174a8815a260d33e78ba440055ceb1f68d7d6d
 
 ## Train
 
@@ -91,17 +100,28 @@ python -m curiosity_a2c.main \
     --video-episodes 1 5 10
 ```
 
+<<<<<<< HEAD
 ## Notebook 
 
 `./icm_notebook.ipynb`
 
 Note: we recommend running the previous commands to reproduce the results. The notebook version is mainly for theorical reference and convenience to understand the main part of the code and there seem to be some issues sometimes with recognizing the local .venv environments. 
+=======
+## Notebook
+
+`./icm_notebook.ipynb`
+
+Note: we recommend using previous commands for reproducing the experiments results. The notebook is mainly for theoretical convenience to understand the main code algo and the maths. 
+For experiments, it should be observed that the A2C+ICM version performs better than the baseline A2C only one.
+
+>>>>>>> 31174a8815a260d33e78ba440055ceb1f68d7d6d
 
 ## Project Structure
 
 ```
 mini-curiosity/
 ├── README.md
+├── icm_notebook.ipynb
 ├── src
 │   └── curiosity_a2c
 │       ├── baseline_a2c.py
