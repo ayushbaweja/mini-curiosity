@@ -102,6 +102,7 @@ For experiments, it should be observed that the A2C+ICM version performs better 
 ```
 mini-curiosity/
 ├── README.md
+├── icm_notebook.ipynb
 ├── src
 │   └── curiosity_a2c
 │       ├── baseline_a2c.py
