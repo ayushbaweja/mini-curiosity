@@ -18,13 +18,13 @@ def main():
         epilog="""
 Examples:
   # Train both models and compare
-  python -m curiosity_a2c.main --mode both --timesteps 100000
+  python -m curiosity_a2c.main --mode both --timesteps 200000
   
   # Train only baseline
-  python -m curiosity_a2c.main --mode baseline --timesteps 100000
+  python -m curiosity_a2c.main --mode baseline --timesteps 200000
   
   # Train only ICM
-  python -m curiosity_a2c.main --mode icm --timesteps 100000
+  python -m curiosity_a2c.main --mode icm --timesteps 200000
   
   # Compare existing models
   python -m curiosity_a2c.main --mode compare --test-episodes 50
@@ -45,7 +45,7 @@ Examples:
     parser.add_argument(
         '--timesteps',
         type=int,
-        default=100_000,
+        default=200_000,
         help='Total training timesteps'
     )
     
@@ -59,14 +59,14 @@ Examples:
     parser.add_argument(
         '--baseline-path',
         type=str,
-        default='models/baseline/a2c_mountaincar_baseline_final',
+        default='models/baseline/a2c_frozenlake_baseline_final',
         help='Path to baseline model for comparison/testing'
     )
     
     parser.add_argument(
         '--icm-path',
         type=str,
-        default='models/icm/a2c_mountaincar_icm_final',
+        default='models/icm/a2c_frozenlake_icm_final',
         help='Path to ICM model for comparison/testing'
     )
     
@@ -123,21 +123,29 @@ Examples:
     )
 
     args = parser.parse_args()
-    
+
+    def _save_prefix(path_str: str) -> str:
+        return path_str[:-6] if path_str.endswith('_final') else path_str
+
     # Execute based on mode
     if args.mode == 'baseline':
         print("\n>>> Training Baseline A2C <<<")
+        baseline_save_path = _save_prefix(args.baseline_path)
         model, env = train_baseline_a2c(
             total_timesteps=args.timesteps,
             n_envs=args.n_envs,
             learning_rate=7e-4,
-            ent_coef=0.01
+            ent_coef=0.01,
+            save_path=baseline_save_path,
         )
+        saved_baseline_path = f"{baseline_save_path}_final"
+        args.baseline_path = saved_baseline_path
         print("\n>>> Testing Baseline A2C <<<")
-        test_model(args.baseline_path, n_episodes=10, model_type='baseline')
+        test_model(saved_baseline_path, n_episodes=10, model_type='baseline')
     
     elif args.mode == 'icm':
         print("\n>>> Training A2C with ICM <<<")
+        icm_save_path = _save_prefix(args.icm_path)
         model, icm, env = train_a2c_with_icm(
             total_timesteps=args.timesteps,
             n_envs=args.n_envs,
@@ -145,23 +153,31 @@ Examples:
             ent_coef=0.01,
             icm_lr=args.icm_lr,
             icm_beta=args.icm_beta,
-            icm_eta=args.icm_eta
+            icm_eta=args.icm_eta,
+            save_path=icm_save_path,
         )
+        saved_icm_path = f"{icm_save_path}_final"
+        args.icm_path = saved_icm_path
         print("\n>>> Testing A2C with ICM <<<")
-        test_model(args.icm_path, n_episodes=10, model_type='icm')
+        test_model(saved_icm_path, n_episodes=10, model_type='icm')
     
     elif args.mode == 'both':
         print("\n>>> Training Both Models <<<")
-        
+
         print("\n[1/2] Training Baseline A2C...")
+        baseline_save_path = _save_prefix(args.baseline_path)
         baseline_model, baseline_env = train_baseline_a2c(
             total_timesteps=args.timesteps,
             n_envs=args.n_envs,
             learning_rate=7e-4,
-            ent_coef=0.01
+            ent_coef=0.01,
+            save_path=baseline_save_path,
         )
-        
+        saved_baseline_path = f"{baseline_save_path}_final"
+        args.baseline_path = saved_baseline_path
+
         print("\n[2/2] Training A2C with ICM...")
+        icm_save_path = _save_prefix(args.icm_path)
         icm_model, icm_module, icm_env = train_a2c_with_icm(
             total_timesteps=args.timesteps,
             n_envs=args.n_envs,
@@ -169,9 +185,12 @@ Examples:
             ent_coef=0.01,
             icm_lr=args.icm_lr,
             icm_beta=args.icm_beta,
-            icm_eta=args.icm_eta
+            icm_eta=args.icm_eta,
+            save_path=icm_save_path,
         )
-        
+        saved_icm_path = f"{icm_save_path}_final"
+        args.icm_path = saved_icm_path
+
         print("\n>>> Comparing Models <<<")
         compare_models(
             args.baseline_path,

@@ -1,6 +1,6 @@
 # mini-curiosity
 
-Implementation of A2C baseline for the Pathak et al. (2017) Intrinsic Curiosity Module paper.
+Implementation of A2C baseline for the Pathak et al. (2017) Intrinsic Curiosity Module paper, now wired to the FrozenLake-v1 environment.
 
 
 ## Request GPU on Pace
@@ -102,47 +102,38 @@ mini-curiosity/
 │       └── utils.py
 ```
 
-## To change to new environment 
-```bash
-#In src/curiosity_a2c/utils.py:
+## Adapting to a different Gymnasium task
+```python
+# src/curiosity_a2c/utils.py
+from curiosity_a2c.envs import make_frozenlake_env
 
-def make_env():
-    """Create and wrap the environment"""
-    env = gym.make('MountainCar-v0')  # ← Change this
-    env = Monitor(env)
-    return env
 
+def make_env(render_mode=None):
+    """Create and wrap the default FrozenLake environment."""
+    return make_frozenlake_env(map_name="8x8", is_slippery=True, render_mode=render_mode)
 ```
 
-And optionally change the save paths used: 
+To target another task (e.g. CartPole), replace `make_env` with the wrappers you need and update save paths so models stay organised:
 
-```bash
-#In src/curiosity_a2c/baseline_a2c.py:
-def train_baseline_a2c(
-    # ... parameters ...
-    save_path="a2c_cartpole_baseline"  # ← Changed
-):
+```python
+# src/curiosity_a2c/utils.py
+from stable_baselines3.common.monitor import Monitor
+import gymnasium as gym
 
-#In src/curiosity_a2c/icm_a2c.py:
-def train_a2c_with_icm(
-    # ... parameters ...
-    save_path="a2c_cartpole_icm"  # ← Changed
-):
 
-#In src/curiosity_a2c/main.py:
-parser.add_argument(
-    '--baseline-path',
-    type=str,
-    default='a2c_cartpole_baseline_final',  # ← Changed
-    help='Path to baseline model'
-)
+def make_env(render_mode=None):
+    env = gym.make("CartPole-v1", render_mode=render_mode)
+    return Monitor(env)
 
-parser.add_argument(
-    '--icm-path',
-    type=str,
-    default='a2c_cartpole_icm_final',  # ← Changed
-    help='Path to ICM model'
-)
+# src/curiosity_a2c/baseline_a2c.py
+def train_baseline_a2c(..., save_path="models/baseline/a2c_cartpole_baseline"): ...
+
+# src/curiosity_a2c/icm_a2c.py
+def train_a2c_with_icm(..., save_path="models/icm/a2c_cartpole_icm"): ...
+
+# src/curiosity_a2c/main.py
+parser.add_argument('--baseline-path', default='models/baseline/a2c_cartpole_baseline_final', ... )
+parser.add_argument('--icm-path', default='models/icm/a2c_cartpole_icm_final', ... )
 ```
 
 ## Requirements
