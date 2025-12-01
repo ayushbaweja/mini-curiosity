@@ -5,7 +5,7 @@ from typing import Dict, Optional
 import gymnasium as gym
 from gymnasium.wrappers import FlattenObservation
 from stable_baselines3.common.monitor import Monitor
-
+from .wrappers import FrozenLakePixelWrapper
 
 __all__ = ["make_frozenlake_env"]
 
@@ -13,7 +13,7 @@ __all__ = ["make_frozenlake_env"]
 def make_frozenlake_env(
     map_name: str = "8x8",
     is_slippery: bool = True,
-    render_mode: Optional[str] = None,
+    render_mode: Optional[str] = "rgb_array",
     monitor: bool = True,
     monitor_kwargs: Optional[Dict] = None,
 ):
@@ -22,9 +22,9 @@ def make_frozenlake_env(
         "FrozenLake-v1",
         map_name=map_name,
         is_slippery=is_slippery,
-        render_mode=render_mode,
+        render_mode="rgb_array",
     )
-    env = FlattenObservation(env)
+    env = FrozenLakePixelWrapper(env)
     if monitor:
         monitor_kwargs = monitor_kwargs or {}
         env = Monitor(env, **monitor_kwargs)

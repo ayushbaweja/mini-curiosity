@@ -208,8 +208,8 @@ class ICMCallback(BaseCallback):
                 actions_list.append(rollout_buffer.actions[step, env])
         
         # Convert to tensors
-        obs = torch.FloatTensor(np.array(obs_list)).to(self.model.device)
-        next_obs = torch.FloatTensor(np.array(next_obs_list)).to(self.model.device)
+        obs = torch.FloatTensor(np.array(obs_list)).to(self.model.device) / 255.0
+        next_obs = torch.FloatTensor(np.array(next_obs_list)).to(self.model.device) / 255.0
         actions = torch.FloatTensor(np.array(actions_list)).to(self.model.device)
         
         # Handle action shape for discrete actions (squeeze if needed)
