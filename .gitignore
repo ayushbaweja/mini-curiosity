@@ -10,3 +10,4 @@ __pycache__/
 temp/
 .ipynb_checkpoints/
 src/curiosity_a2c.egg-info/
+.DS_Store
