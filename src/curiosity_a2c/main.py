@@ -122,10 +122,30 @@ Examples:
         help='Episode numbers to record as videos'
     )
 
+    parser.add_argument(
+        '--run-name',
+        type=str,
+        default='default',
+        help='Unique name for this training run (e.g., "k_step_5")'
+    )
+
+    parser.add_argument(
+        '--k-step',
+        type=int,
+        default=1,
+        help='Number of steps to look ahead for ICM (default: 1)'
+    )
+
     args = parser.parse_args()
 
     def _save_prefix(path_str: str) -> str:
         return path_str[:-6] if path_str.endswith('_final') else path_str
+
+    base_dir = f"models/{args.run_name}"
+    if args.baseline_path == 'models/baseline/a2c_frozenlake_baseline_final':
+        args.baseline_path = f"{base_dir}/baseline/model"
+    if args.icm_path == 'models/icm/a2c_frozenlake_icm_final':
+        args.icm_path = f"{base_dir}/icm/model"
 
     # Execute based on mode
     if args.mode == 'baseline':
@@ -154,6 +174,7 @@ Examples:
             icm_lr=args.icm_lr,
             icm_beta=args.icm_beta,
             icm_eta=args.icm_eta,
+            icm_k_step=args.k_step,
             save_path=icm_save_path,
         )
         saved_icm_path = f"{icm_save_path}_final"
@@ -186,6 +207,7 @@ Examples:
             icm_lr=args.icm_lr,
             icm_beta=args.icm_beta,
             icm_eta=args.icm_eta,
+            icm_k_step=args.k_step,
             save_path=icm_save_path,
         )
         saved_icm_path = f"{icm_save_path}_final"
@@ -221,12 +243,13 @@ Examples:
             )
     
     if args.record_videos:
+        base_video_dir = f"videos/{args.run_name}"
         if args.mode == 'baseline':
             print("\n>>> Recording Baseline Videos <<<")
             record_episodes(
                 model_path=args.baseline_path,
                 episode_numbers=args.video_episodes,
-                video_folder='videos/baseline',
+                video_folder=f"{base_video_dir}/baseline",
                 model_type='baseline'
             )
         elif args.mode == 'icm':
@@ -234,7 +257,7 @@ Examples:
             record_episodes(
                 model_path=args.icm_path,
                 episode_numbers=args.video_episodes,
-                video_folder='videos/icm',
+                video_folder=f"{base_video_dir}/icm",
                 model_type='icm'
             )
         elif args.mode in ['both', 'compare']:
@@ -243,7 +266,7 @@ Examples:
                 baseline_path=args.baseline_path,
                 icm_path=args.icm_path,
                 n_episodes=max(args.video_episodes),
-                video_folder='videos/comparison'
+                video_folder=f"{base_video_dir}/comparison"
             )
 
     print("\n✓ Done!")

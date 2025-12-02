@@ -25,6 +25,7 @@ def train_a2c_with_icm(
     icm_lr: float = 1e-3,
     icm_beta: float = 0.2,
     icm_eta: float = 0.01,
+    icm_k_step: int = 1,
     lambda_weight: float = 0.1,
     save_path: str = "models/icm/a2c_frozenlake_icm",
 ):
@@ -75,6 +76,7 @@ def train_a2c_with_icm(
     icm_callback = ICMCallback(
         icm_module,
         icm_optimizer,
+        k_step=icm_k_step,
         lambda_weight=lambda_weight,
         verbose=0,
     )
@@ -98,6 +100,7 @@ def train_a2c_with_icm(
     print(f"\n{'=' * 50}")
     print("Training A2C with ICM on FrozenLake-v1")
     print(f"{'=' * 50}")
+    print(f"ICM K-Step Prediction: {icm_k_step}")
     print(f"Total timesteps: {total_timesteps:,}")
     print(f"Number of environments: {n_envs}")
     print(f"A2C Learning rate: {learning_rate}")

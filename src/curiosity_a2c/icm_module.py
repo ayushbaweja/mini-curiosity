@@ -166,19 +166,21 @@ class ICMCallback(BaseCallback):
     Callback to train ICM module during A2C rollouts and add intrinsic rewards.
     """
     
-    def __init__(self, icm_module, icm_optimizer, lambda_weight=0.1, verbose=0):
+    def __init__(self, icm_module, icm_optimizer, k_step=1, lambda_weight=0.1, verbose=0):
         """
         Initialize ICM callback.
         
         Args:
             icm_module: ICMModule instance
             icm_optimizer: Optimizer for ICM
+            k_step: Number of steps to look ahead
             lambda_weight: Weight for ICM loss (not currently used)
             verbose: Verbosity level
         """
         super(ICMCallback, self).__init__(verbose)
         self.icm_module = icm_module
         self.icm_optimizer = icm_optimizer
+        self.k_step = k_step
         self.lambda_weight = lambda_weight
         self.intrinsic_rewards = []
         self.forward_losses = []
@@ -191,26 +193,27 @@ class ICMCallback(BaseCallback):
     def _on_rollout_end(self) -> None:
         """Train ICM on collected rollout data and add intrinsic rewards."""
         rollout_buffer = self.model.rollout_buffer
-        
-        # Collect all transitions
-        obs_list = []
-        next_obs_list = []
-        actions_list = []
-        
         buffer_size = rollout_buffer.observations.shape[0]
         n_envs = rollout_buffer.observations.shape[1]
+
+        if buffer_size <= self.k_step:
+            return
+
+        obs_t_list = []
+        obs_tk_list = []
+        action_t_list = []
         
         # Extract transitions step by step
-        for step in range(buffer_size - 1):
+        for step in range(buffer_size - self.k_step):
             for env in range(n_envs):
-                obs_list.append(rollout_buffer.observations[step, env])
-                next_obs_list.append(rollout_buffer.observations[step + 1, env])
-                actions_list.append(rollout_buffer.actions[step, env])
+                obs_t_list.append(rollout_buffer.observations[step, env])
+                obs_tk_list.append(rollout_buffer.observations[step + self.k_step, env])
+                action_t_list.append(rollout_buffer.actions[step, env])
         
         # Convert to tensors
-        obs = torch.FloatTensor(np.array(obs_list)).to(self.model.device) / 255.0
-        next_obs = torch.FloatTensor(np.array(next_obs_list)).to(self.model.device) / 255.0
-        actions = torch.FloatTensor(np.array(actions_list)).to(self.model.device)
+        obs_t = torch.FloatTensor(np.array(obs_t_list)).to(self.model.device) / 255.0
+        obs_tk = torch.FloatTensor(np.array(obs_tk_list)).to(self.model.device) / 255.0
+        actions = torch.FloatTensor(np.array(action_t_list)).to(self.model.device)
         
         # Handle action shape for discrete actions (squeeze if needed)
         if len(actions.shape) > 1 and actions.shape[-1] == 1:
@@ -218,7 +221,7 @@ class ICMCallback(BaseCallback):
         
         # Train ICM
         self.icm_optimizer.zero_grad()
-        forward_loss, inverse_loss, intrinsic_reward = self.icm_module(obs, next_obs, actions)
+        forward_loss, inverse_loss, intrinsic_reward = self.icm_module(obs_t, obs_tk, actions)
         
         # Combined ICM loss (Eq. 7 in paper)
         icm_loss = (1 - self.icm_module.beta) * inverse_loss + self.icm_module.beta * forward_loss
@@ -227,8 +230,8 @@ class ICMCallback(BaseCallback):
         
         # Add intrinsic rewards to rollout buffer
         intrinsic_reward_np = intrinsic_reward.detach().cpu().numpy()
-        intrinsic_reward_reshaped = intrinsic_reward_np.reshape(buffer_size - 1, n_envs)
-        rollout_buffer.rewards[:-1] += intrinsic_reward_reshaped
+        intrinsic_reward_reshaped = intrinsic_reward_np.reshape(buffer_size - self.k_step, n_envs)
+        rollout_buffer.rewards[:buffer_size - self.k_step] += intrinsic_reward_reshaped
         
         # Track statistics
         self.intrinsic_rewards.extend(intrinsic_reward_np.tolist())
@@ -255,7 +258,7 @@ class ICMCallback(BaseCallback):
                 self.logger.record("icm/avg_inverse_loss", np.mean(self.inverse_losses[-100:]))
             
             # Log reward composition
-            extrinsic_rewards = rollout_buffer.rewards[:-1] - intrinsic_reward_reshaped
+            extrinsic_rewards = rollout_buffer.rewards[:-self.k_step] - intrinsic_reward_reshaped
             self.logger.record("icm/mean_extrinsic_reward", extrinsic_rewards.mean())
             self.logger.record("icm/intrinsic_to_extrinsic_ratio", 
                              intrinsic_reward_np.mean() / (abs(extrinsic_rewards.mean()) + 1e-8))

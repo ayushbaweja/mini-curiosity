@@ -16,7 +16,7 @@ from curiosity_a2c.envs import make_frozenlake_env
 def make_env(render_mode=None):
     """Create and wrap the FrozenLake environment for training or evaluation."""
     return make_frozenlake_env(
-        map_name="8x8",
+        map_name="4x4",
         is_slippery=True,
         render_mode=render_mode,
     )
