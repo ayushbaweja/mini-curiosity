@@ -193,8 +193,10 @@ class ICMCallback(BaseCallback):
     def _on_rollout_end(self) -> None:
         """Train ICM on collected rollout data and add intrinsic rewards."""
         rollout_buffer = self.model.rollout_buffer
-        buffer_size = rollout_buffer.observations.shape[0]
-        n_envs = rollout_buffer.observations.shape[1]
+        raw_obs = rollout_buffer.observations
+        episode_starts = rollout_buffer.episode_starts
+        buffer_size = raw_obs.shape[0]
+        n_envs = raw_obs.shape[1]
 
         if buffer_size <= self.k_step:
             return
@@ -202,14 +204,25 @@ class ICMCallback(BaseCallback):
         obs_t_list = []
         obs_tk_list = []
         action_t_list = []
-        
+        valid_indices = []
         # Extract transitions step by step
         for step in range(buffer_size - self.k_step):
             for env in range(n_envs):
+                # boundary check
+                is_broken = False
+                for lookahead in range(1, self.k_step + 1):
+                    if episode_starts[step + lookahead, env]:
+                        is_broken = True
+                        break
+                if is_broken:
+                    continue
                 obs_t_list.append(rollout_buffer.observations[step, env])
                 obs_tk_list.append(rollout_buffer.observations[step + self.k_step, env])
                 action_t_list.append(rollout_buffer.actions[step, env])
-        
+                valid_indices.append((step, env))
+        if len(obs_t_list) == 0:
+            # Skip this update if no valid k-steps exist
+            return
         # Convert to tensors
         obs_t = torch.FloatTensor(np.array(obs_t_list)).to(self.model.device) / 255.0
         obs_tk = torch.FloatTensor(np.array(obs_tk_list)).to(self.model.device) / 255.0
@@ -230,8 +243,12 @@ class ICMCallback(BaseCallback):
         
         # Add intrinsic rewards to rollout buffer
         intrinsic_reward_np = intrinsic_reward.detach().cpu().numpy()
-        intrinsic_reward_reshaped = intrinsic_reward_np.reshape(buffer_size - self.k_step, n_envs)
-        rollout_buffer.rewards[:buffer_size - self.k_step] += intrinsic_reward_reshaped
+        batch_intrinsic_rewards = np.zeros((buffer_size, n_envs), dtype=np.float32)
+
+        for i, (r, c) in enumerate(valid_indices):
+            batch_intrinsic_rewards[r, c] = intrinsic_reward_np[i]
+        rollout_buffer.rewards += batch_intrinsic_rewards
+        # rollout_buffer.rewards[:buffer_size - self.k_step] += batch_intrinsic_rewards
         
         # Track statistics
         self.intrinsic_rewards.extend(intrinsic_reward_np.tolist())
@@ -246,6 +263,7 @@ class ICMCallback(BaseCallback):
             # Log ICM-specific metrics
             self.logger.record("icm/forward_loss", forward_loss.item())
             self.logger.record("icm/inverse_loss", inverse_loss.item())
+            self.logger.record("icm/k_step", self.k_step)
             self.logger.record("icm/total_loss", icm_loss.item())
             self.logger.record("icm/mean_intrinsic_reward", intrinsic_reward_np.mean())
             self.logger.record("icm/std_intrinsic_reward", intrinsic_reward_np.std())
@@ -258,7 +276,7 @@ class ICMCallback(BaseCallback):
                 self.logger.record("icm/avg_inverse_loss", np.mean(self.inverse_losses[-100:]))
             
             # Log reward composition
-            extrinsic_rewards = rollout_buffer.rewards[:-self.k_step] - intrinsic_reward_reshaped
+            extrinsic_rewards = rollout_buffer.rewards - batch_intrinsic_rewards
             self.logger.record("icm/mean_extrinsic_reward", extrinsic_rewards.mean())
             self.logger.record("icm/intrinsic_to_extrinsic_ratio", 
                              intrinsic_reward_np.mean() / (abs(extrinsic_rewards.mean()) + 1e-8))
