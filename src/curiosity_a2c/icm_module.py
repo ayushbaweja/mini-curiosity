@@ -193,10 +193,14 @@ class ICMCallback(BaseCallback):
     def _on_rollout_end(self) -> None:
         """Train ICM on collected rollout data and add intrinsic rewards."""
         rollout_buffer = self.model.rollout_buffer
-        raw_obs = rollout_buffer.observations
-        episode_starts = rollout_buffer.episode_starts
-        buffer_size = raw_obs.shape[0]
-        n_envs = raw_obs.shape[1]
+        last_obs = self.model._last_obs
+        last_episode_starts = self.model._last_episode_starts
+        all_obs = np.concatenate([rollout_buffer.observations, np.expand_dims(last_obs, 0)], axis=0)
+        all_starts = np.concatenate([rollout_buffer.episode_starts, np.expand_dims(last_episode_starts, 0)], axis=0)
+        # raw_obs = rollout_buffer.observations
+        # episode_starts = rollout_buffer.episode_starts
+        buffer_size = rollout_buffer.observations.shape[0]
+        n_envs = rollout_buffer.observations.shape[1]
 
         if buffer_size <= self.k_step:
             return
@@ -206,18 +210,18 @@ class ICMCallback(BaseCallback):
         action_t_list = []
         valid_indices = []
         # Extract transitions step by step
-        for step in range(buffer_size - self.k_step):
+        for step in range(buffer_size - self.k_step + 1):
             for env in range(n_envs):
                 # boundary check
                 is_broken = False
                 for lookahead in range(1, self.k_step + 1):
-                    if episode_starts[step + lookahead, env]:
+                    if all_starts[step + lookahead, env]:
                         is_broken = True
                         break
                 if is_broken:
                     continue
-                obs_t_list.append(rollout_buffer.observations[step, env])
-                obs_tk_list.append(rollout_buffer.observations[step + self.k_step, env])
+                obs_t_list.append(all_obs[step, env])
+                obs_tk_list.append(all_obs[step + self.k_step, env])
                 action_t_list.append(rollout_buffer.actions[step, env])
                 valid_indices.append((step, env))
         if len(obs_t_list) == 0:
@@ -246,8 +250,10 @@ class ICMCallback(BaseCallback):
         batch_intrinsic_rewards = np.zeros((buffer_size, n_envs), dtype=np.float32)
 
         for i, (r, c) in enumerate(valid_indices):
-            batch_intrinsic_rewards[r, c] = intrinsic_reward_np[i]
-        rollout_buffer.rewards += batch_intrinsic_rewards
+        #     batch_intrinsic_rewards[r, c] = intrinsic_reward_np[i]
+        # rollout_buffer.rewards += batch_intrinsic_rewards
+            if r < buffer_size:
+                rollout_buffer.rewards[r,c] += intrinsic_reward_np[i]
         # rollout_buffer.rewards[:buffer_size - self.k_step] += batch_intrinsic_rewards
         
         # Track statistics
