@@ -199,8 +199,8 @@ class ICMCallback(BaseCallback):
         all_starts = np.concatenate([rollout_buffer.episode_starts, np.expand_dims(last_episode_starts, 0)], axis=0)
         # raw_obs = rollout_buffer.observations
         # episode_starts = rollout_buffer.episode_starts
-        buffer_size = raw_obs.shape[0]
-        n_envs = raw_obs.shape[1]
+        buffer_size = rollout_buffer.observations.shape[0]
+        n_envs = rollout_buffer.observations.shape[1]
 
         if buffer_size <= self.k_step:
             return
