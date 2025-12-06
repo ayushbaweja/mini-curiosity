@@ -26,6 +26,7 @@ def train_a2c_with_icm(
     icm_beta: float = 0.2,
     icm_eta: float = 0.01,
     lambda_weight: float = 0.1,
+    icm_k_step: int = 1,
     save_path: str = "models/icm/a2c_frozenlake_icm",
 ):
     """Train A2C with ICM on the FrozenLake-v1 environment."""
@@ -67,6 +68,7 @@ def train_a2c_with_icm(
         env.action_space,
         beta=icm_beta,
         eta=icm_eta,
+        k_step=icm_k_step,
     ).to(model.device)
 
     icm_optimizer = Adam(icm_module.parameters(), lr=icm_lr)
@@ -75,6 +77,7 @@ def train_a2c_with_icm(
     icm_callback = ICMCallback(
         icm_module,
         icm_optimizer,
+        k_step=icm_k_step,
         lambda_weight=lambda_weight,
         verbose=0,
     )

@@ -122,7 +122,31 @@ Examples:
         help='Episode numbers to record as videos'
     )
 
+    parser.add_argument(
+        '--k-step',
+        type=int,
+        default=1,
+        help='Number of future steps to predict in ICM forward model'
+    )
+
+    parser.add_argument(
+        '--run-name',
+        type=str,
+        default=None,
+        help='Custom run name (overrides default model save paths)'
+    )
+
     args = parser.parse_args()
+
+    if args.run_name:
+        # Override paths based on the run name to prevent overwriting defaults
+        if args.mode == 'icm':
+            args.icm_path = f"models/icm/{args.run_name}_final"
+        elif args.mode == 'baseline':
+            args.baseline_path = f"models/baseline/{args.run_name}_final"
+        elif args.mode == 'both':
+            args.baseline_path = f"models/baseline/{args.run_name}_baseline_final"
+            args.icm_path = f"models/icm/{args.run_name}_icm_final"
 
     def _save_prefix(path_str: str) -> str:
         return path_str[:-6] if path_str.endswith('_final') else path_str
@@ -154,6 +178,7 @@ Examples:
             icm_lr=args.icm_lr,
             icm_beta=args.icm_beta,
             icm_eta=args.icm_eta,
+            icm_k_step=args.k_step,
             save_path=icm_save_path,
         )
         saved_icm_path = f"{icm_save_path}_final"
