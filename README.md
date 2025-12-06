@@ -1,15 +1,20 @@
 # mini-curiosity
 
-Implementation of A2C baseline for the Pathak et al. (2017) Intrinsic Curiosity Module paper, now wired to the FrozenLake-v1 environment.
+Implementation of A2C baseline for the Pathak et al. (2017) Intrinsic Curiosity Module paper, now wired to the FrozenLake-v1 environment along with a k-step curiosity modification. 
 
+## Overview
 
-## Request GPU on Pace
+This project implements and compares two reinforcement learning approaches on the FrozenLake-v1 environment:
 
-```bash
+- **Baseline A2C**: Standard Advantage Actor-Critic algorithm
+- **A2C + ICM**: A2C enhanced with Intrinsic Curiosity Module for curiosity-driven exploration
 
-srun --account=<account_name> --job-name=my_a100_job --partition=gpu-a100 --gres=gpu:a100:1 --cpus-per-task=2 --mem=32G --time=01:00:00 --pty /bin/bash 
+### Key Features
 
-```
+- **Intrinsic Curiosity Module (ICM)**: Full implementation of the Pathak et al. (2017) ICM with forward and inverse dynamics models
+- **k-step Curiosity**: Extended ICM supporting k-step future prediction for improved exploration
+- **Visualization Tools**: TensorBoard integration for training metrics and video recording for policy visualization
+- **Extensible Design**: Easy adaptation to other Gymnasium environments
 
 ## Quick Setup
 
@@ -27,9 +32,9 @@ uv pip install -e .
 
 ## Quick Experiment
 ```bash
-#Train and text baseline A2c and Train A2c + ICM 
+#Train and test baseline A2C and Train A2C + ICM 
 
-python -m curiosity_a2c.main --mode both --timesteps 100000 --test-episodes 50
+python -m curiosity_a2c.main --mode both --timesteps 300000 --test-episodes 50
 
 ```
 
@@ -37,10 +42,10 @@ python -m curiosity_a2c.main --mode both --timesteps 100000 --test-episodes 50
 
 ```bash
 #Train baseline A2c
-python -m curiosity_a2c.main --mode baseline --timesteps 100000
+python -m curiosity_a2c.main --mode baseline --timesteps 300000
 
 #Train ICM
-python -m curiosity_a2c.main --mode icm --timesteps 100000
+python -m curiosity_a2c.main --mode icm --timesteps 300000
 
 #Custom ICM parameters
 #icm-beta: Forward vs Inverse Loss Balance. If beta = 1, no Inverse Model (features filtering). 
@@ -48,7 +53,7 @@ python -m curiosity_a2c.main --mode icm --timesteps 100000
 #icm-lr: ICM Learning Rate
 python -m curiosity_a2c.main \
     --mode icm \
-    --timesteps 100000 \
+    --timesteps 300000 \
     --icm-beta 0.2 \
     --icm-eta 0.01 \
     --icm-lr 0.001
@@ -95,8 +100,7 @@ python -m curiosity_a2c.main \
 
 `./icm_notebook.ipynb`
 
-Note: we recommend using previous commands for reproducing the experiments results. The notebook is mainly for theoretical convenience to understand the main code algo and the maths. 
-For experiments, it should be observed that the A2C+ICM version performs better than the baseline A2C only one.
+Note: we recommend using previous commands for reproducing the experiments results. The notebook is mainly for theoretical convenience to understand the algorithm. 
 
 
 ## Project Structure
@@ -105,6 +109,11 @@ For experiments, it should be observed that the A2C+ICM version performs better 
 mini-curiosity/
 ├── README.md
 ├── icm_notebook.ipynb
+├── logs
+    ├── baseline/
+    ├── icm/
+├── output-videos/
+├── models/
 ├── src
 │   └── curiosity_a2c
 │       ├── baseline_a2c.py
@@ -115,6 +124,7 @@ mini-curiosity/
 │       ├── main.py
 │       ├── record_videos.py
 │       └── utils.py
+        └── wrappers.py
 ```
 
 ## Adapting to a different Gymnasium task
@@ -152,6 +162,4 @@ parser.add_argument('--icm-path', default='models/icm/a2c_cartpole_icm_final', .
 ```
 
 ## Requirements
-
-- Python ≥3.9
-- uv (for fast dependency management)
+All Python package requirements are listed in `pyproject.toml` and can be installed by following the [Quick Setup](#quick-setup) instructions.
