@@ -32,11 +32,11 @@ def train_a2c_with_icm(
     """Train A2C with ICM on the FrozenLake-v1 environment."""
     # Create vectorized environment
     env = DummyVecEnv([make_env for _ in range(n_envs)])
-    env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
+    env = VecNormalize(env, norm_obs=False, norm_reward=True, clip_obs=10.0)
 
     # Create evaluation environment
     eval_env = DummyVecEnv([make_env])
-    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=10.0)
+    eval_env = VecNormalize(eval_env, norm_obs=False, norm_reward=False, clip_obs=10.0)
 
     # Ensure output directories exist
     save_dir = Path(save_path).parent
@@ -47,7 +47,7 @@ def train_a2c_with_icm(
 
     # Create A2C model
     model = A2C(
-        "MlpPolicy",
+        "CnnPolicy",
         env,
         learning_rate=learning_rate,
         n_steps=n_steps,

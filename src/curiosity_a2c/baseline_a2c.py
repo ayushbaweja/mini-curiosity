@@ -52,11 +52,11 @@ def train_baseline_a2c(
     env = DummyVecEnv([make_env for _ in range(n_envs)])
     
     # Normalize observations and rewards for better training
-    env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.)
+    env = VecNormalize(env, norm_obs=False, norm_reward=True, clip_obs=10.)
     
     # Create evaluation environment
     eval_env = DummyVecEnv([make_env])
-    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=10.)
+    eval_env = VecNormalize(eval_env, norm_obs=False, norm_reward=False, clip_obs=10.)
     
     # Ensure output directories are present
     save_dir = Path(save_path).parent
@@ -67,7 +67,7 @@ def train_baseline_a2c(
 
     # Callbacks for evaluation and checkpointing
     eval_callback = EvalCallback(
-        eval_env,
+        eval_env,   
         best_model_save_path=f"./logs/{save_path}/",
         log_path=f"./logs/{save_path}/",
         eval_freq=5000,
@@ -84,7 +84,7 @@ def train_baseline_a2c(
     
     # Create A2C model
     model = A2C(
-        "MlpPolicy",
+        "CnnPolicy",
         env,
         learning_rate=learning_rate,
         n_steps=n_steps,
