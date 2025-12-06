@@ -27,11 +27,7 @@ def _build_env_factory(
     """Return a callable that creates a (possibly recording) FrozenLake env."""
 
     def _init():
-        # FIX: Explicitly set map_name="4x4" and is_slippery=True to match 
-        # the configuration used during training (16 states).
         env = make_frozenlake_env(
-            map_name="4x4",
-            is_slippery=True,
             render_mode='rgb_array' if record else None,
             monitor=False,
         )

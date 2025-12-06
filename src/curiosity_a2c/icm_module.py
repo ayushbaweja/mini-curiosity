@@ -1,6 +1,7 @@
 """
 Intrinsic Curiosity Module (ICM) implementation.
 Based on: "Curiosity-driven Exploration by Self-supervised Prediction" (Pathak et al., 2017)
+Updated to support k-step future prediction.
 """
 import torch
 import torch.nn as nn
@@ -92,6 +93,7 @@ class ICMModule(nn.Module):
         )
     
     def encode(self, obs):
+        """Encode observation to feature space."""
         features = self.feature_encoder(obs)
         features = self.feature_projection(features)
         return features
@@ -121,6 +123,7 @@ class ICMModule(nn.Module):
         
         phi_next_seq = phi_next_flat.view(batch_size, self.k_step, self.feature_dim)
         
+        # --- Inverse Model (predict action given s_t and s_{t+1}) ---
         phi_next_t1 = phi_next_seq[:, 0, :]
         phi_concat = torch.cat([phi_obs, phi_next_t1], dim=1)
         pred_action = self.inverse_model(phi_concat)
@@ -130,6 +133,7 @@ class ICMModule(nn.Module):
         else:
             inverse_loss = F.mse_loss(pred_action, action)
         
+        # --- Forward Model (predict s_{t+1}...s_{t+k} given s_t and a_t) ---
         if self.discrete:
             action_one_hot = F.one_hot(action.long(), num_classes=self.action_dim).float()
         else:
@@ -138,8 +142,10 @@ class ICMModule(nn.Module):
         phi_action = torch.cat([phi_obs, action_one_hot], dim=1)
         pred_phi_next_flat = self.forward_model(phi_action)
         pred_phi_next_seq = pred_phi_next_flat.view(batch_size, self.k_step, self.feature_dim)
+        
         forward_loss = F.mse_loss(pred_phi_next_seq, phi_next_seq.detach())
         
+        # Intrinsic reward calculation
         prediction_errors = torch.norm(
             pred_phi_next_seq - phi_next_seq.detach(), 
             dim=2, 
@@ -155,7 +161,6 @@ class ICMModule(nn.Module):
 class ICMCallback(BaseCallback):
     """
     Callback to train ICM module during A2C rollouts and add intrinsic rewards.
-    Updated to handle k-step sequences.
     """
     
     def __init__(self, icm_module, icm_optimizer, k_step=1, lambda_weight=0.1, verbose=0):
@@ -164,6 +169,8 @@ class ICMCallback(BaseCallback):
         self.icm_optimizer = icm_optimizer
         self.k_step = k_step
         self.lambda_weight = lambda_weight
+        
+        # Statistics tracking
         self.intrinsic_rewards = []
         self.forward_losses = []
         self.inverse_losses = []
@@ -188,9 +195,11 @@ class ICMCallback(BaseCallback):
         actions_list = []
         valid_indices = [] 
         
+        # Extract transitions step by step
         for step in range(buffer_size - self.k_step):
             for env in range(n_envs):
                 is_broken = False
+                # boundary check for sequences
                 for lookahead in range(1, self.k_step + 1):
                     if episode_starts[step + lookahead, env]:
                         is_broken = True
@@ -214,11 +223,8 @@ class ICMCallback(BaseCallback):
             return
 
         device = self.model.device
-        
-        # obs_t: (Batch, ...)
+
         obs_t = torch.tensor(np.array(obs_t_list), dtype=torch.float32).to(device)
-        
-        # next_obs_seq: (Batch, k, ...)
         next_obs_seq = torch.tensor(np.array(next_obs_seq_list), dtype=torch.float32).to(device)
         
         if self.icm_module.is_image:
@@ -230,7 +236,6 @@ class ICMCallback(BaseCallback):
         if len(actions_tensor.shape) > 1 and actions_tensor.shape[-1] == 1:
             actions_tensor = actions_tensor.squeeze(-1)
         
-        # Train ICM
         self.icm_optimizer.zero_grad()
         forward_loss, inverse_loss, intrinsic_reward = self.icm_module(obs_t, next_obs_seq, actions_tensor)
         
@@ -247,9 +252,31 @@ class ICMCallback(BaseCallback):
             
         rollout_buffer.rewards += batch_intrinsic_rewards
         
-        # Logging
+        self.intrinsic_rewards.extend(intrinsic_reward_np.tolist())
+        self.forward_losses.append(forward_loss.item())
+        self.inverse_losses.append(inverse_loss.item())
+        self.icm_losses.append(icm_loss.item())
+        
         if self.logger is not None:
             self.logger.record("icm/forward_loss", forward_loss.item())
             self.logger.record("icm/inverse_loss", inverse_loss.item())
             self.logger.record("icm/k_step", self.k_step)
+            self.logger.record("icm/total_loss", icm_loss.item())
             self.logger.record("icm/mean_intrinsic_reward", intrinsic_reward_np.mean())
+            self.logger.record("icm/std_intrinsic_reward", intrinsic_reward_np.std())
+            self.logger.record("icm/max_intrinsic_reward", intrinsic_reward_np.max())
+            self.logger.record("icm/min_intrinsic_reward", intrinsic_reward_np.min())
+            
+            if len(self.forward_losses) > 0:
+                self.logger.record("icm/avg_forward_loss", np.mean(self.forward_losses[-100:]))
+                self.logger.record("icm/avg_inverse_loss", np.mean(self.inverse_losses[-100:]))
+            
+            extrinsic_rewards = rollout_buffer.rewards - batch_intrinsic_rewards
+            self.logger.record("icm/mean_extrinsic_reward", extrinsic_rewards.mean())
+            self.logger.record("icm/intrinsic_to_extrinsic_ratio", 
+                               intrinsic_reward_np.mean() / (abs(extrinsic_rewards.mean()) + 1e-8))
+        
+        if self.verbose > 0:
+            print(f"ICM - Forward: {forward_loss.item():.4f}, "
+                  f"Inverse: {inverse_loss.item():.4f}, "
+                  f"Intrinsic Reward: {intrinsic_reward_np.mean():.4f}")

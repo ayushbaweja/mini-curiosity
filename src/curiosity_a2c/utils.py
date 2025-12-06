@@ -13,7 +13,7 @@ from curiosity_a2c.envs import make_frozenlake_env
 def make_env(render_mode: Optional[str] = None):
     """Create the default FrozenLake-v1 environment."""
     return make_frozenlake_env(
-        map_name="4x4",
+        map_name="8x8",
         is_slippery=True,
         render_mode=render_mode,
     )
