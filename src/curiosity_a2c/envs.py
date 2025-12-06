@@ -23,6 +23,7 @@ def make_frozenlake_env(
         map_name=map_name,
         is_slippery=is_slippery,
         render_mode=render_mode,
+        reward_schedule=(0,0,0)
     )
     env = FlattenObservation(env)
     if monitor:
