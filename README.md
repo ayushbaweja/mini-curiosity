@@ -162,8 +162,4 @@ parser.add_argument('--icm-path', default='models/icm/a2c_cartpole_icm_final', .
 ```
 
 ## Requirements
-
-- Python ≥3.9
-- uv (for fast dependency management)
-
 All Python package requirements are listed in `pyproject.toml` and can be installed by following the [Quick Setup](#quick-setup) instructions.
